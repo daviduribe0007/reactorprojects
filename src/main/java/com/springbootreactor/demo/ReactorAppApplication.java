@@ -12,8 +12,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 @SpringBootApplication
 public class ReactorAppApplication implements CommandLineRunner {
@@ -30,8 +32,115 @@ public class ReactorAppApplication implements CommandLineRunner {
         // exampleFlatMap ();
         //exampleToString();
         //exampleFluxToMono();
-        exampleUserWithComments();
+        // exampleUserWithComments();
+        // exampleUserWithCommentsUsingWithZipWith();
+        // exampleUserWithCommentsUsingWithZipWithForm2();
+        //exampleUserWithZipWithAndRange();
+        //exampleInterval();
+        //delayElements();
+        //delayElementsMethod();
+        infiniteInterval();
 
+    }
+
+    public void infiniteInterval() throws InterruptedException {
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        Flux.interval(Duration.ofSeconds(1))
+                .doOnTerminate( latch::countDown)
+                .flatMap( aLong -> {
+                    if(aLong > 10 ){
+                        return Flux.error( new InterruptedException("The numbers only incremet to 10"));
+                    }
+                    return  Flux.just(aLong);
+                })
+                .map(aLong -> "hi:" + aLong)
+                .retry(2)//this are used when you need repeat something x times
+                .subscribe(s -> log.info(s.toString()),e-> log.error(e.getMessage()));
+
+        latch.await();
+
+    }
+
+    public void delayElementsMethod() throws InterruptedException {
+        Flux<Integer> rangeFlux = Flux.range(500, 7)
+                .delayElements(Duration.ofSeconds(1))
+                .doOnNext(integer -> log.info(integer.toString()));
+
+        rangeFlux.blockLast();
+
+        Thread.sleep(8000);//this is other form to introduce intervals but there is not used actually
+
+    }
+
+    public void delayElements() {
+        Flux<Integer> rangeFlux = Flux.range(1, 10);
+
+        rangeFlux.delayElements(Duration.ofSeconds(1))
+                .doOnNext(integer -> log.info(integer.toString()))
+                .blockLast();
+
+        rangeFlux.subscribe();
+
+    }
+
+
+    public void exampleInterval() {
+        Flux<Integer> rangeFlux = Flux.range(10, 10);
+        Flux<Long> delay = Flux.interval(Duration.ofSeconds(1));
+
+        rangeFlux.zipWith(delay, (range, delayt) -> range)
+                .doOnNext(integer -> log.info(integer.toString()))
+                .blockLast();//Subscribe on the flow but block to the final element in that flow
+    }
+
+    public void exampleUserWithZipWithAndRange() {
+        Flux<Integer> rangeFlux = Flux.range(10, 4);
+        Flux.just(1, 2, 3, 4)
+                .map(integer -> integer * 2)
+                .zipWith(rangeFlux, (fluxOne, fluxTwo) ->
+                        String.format("Primer flux : %d, Segundo flux : %d ", fluxOne, fluxTwo))
+                .subscribe(s -> log.info(s));
+
+    }
+
+
+    public void exampleUserWithCommentsUsingWithZipWithForm2() {
+
+        log.info("--------------- Head flow -------------- ");
+        Mono<User> userMono = Mono.fromCallable(() -> new User("bruce", " lee"));
+        Mono<Comment> commentMono = Mono.fromCallable(() -> {
+            Comment comments = new Comment();
+            comments.setComments("Hi");
+            comments.setComments(" My name is roberto");
+            comments.setComments(" What happen my doggy");
+            return comments;
+        });
+
+        Mono<UserWithComment> userWithCommentMono = userMono.zipWith(commentMono)
+                .map(tuple -> {
+                    User u = tuple.getT1();
+                    Comment c = tuple.getT2();
+                    return new UserWithComment(u, c);
+                });
+        userWithCommentMono.subscribe(userWithComment -> log.info(userWithComment.toString()));
+    }
+
+    public void exampleUserWithCommentsUsingWithZipWith() {
+
+        log.info("--------------- Head flow -------------- ");
+        Mono<User> userMono = Mono.fromCallable(() -> new User("bruce", " lee"));
+        Mono<Comment> commentMono = Mono.fromCallable(() -> {
+            Comment comments = new Comment();
+            comments.setComments("Hi");
+            comments.setComments(" My name is roberto");
+            comments.setComments(" What happen my doggy");
+            return comments;
+        });
+
+        Mono<UserWithComment> userWithCommentMono = userMono.zipWith(commentMono, (user, Comment) -> new UserWithComment(user, Comment));
+        userWithCommentMono.subscribe(userWithComment -> log.info(userWithComment.toString()));
     }
 
     public void exampleUserWithComments() {
@@ -47,7 +156,7 @@ public class ReactorAppApplication implements CommandLineRunner {
         });
 
         userMono.flatMap(user -> commentMono
-                .map(comment -> new UserWithComment(user,comment)))
+                .map(comment -> new UserWithComment(user, comment)))
                 .subscribe(userWithComment -> log.info(userWithComment.toString()));
     }
 
