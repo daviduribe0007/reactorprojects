@@ -1,4 +1,4 @@
-package com.springbootreactor.demo.models;
+package models;
 
 import lombok.*;
 
