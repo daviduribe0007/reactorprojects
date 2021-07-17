@@ -1,7 +1,9 @@
 package com.springbootreactor.demo;
 
 
+import models.Comment;
 import models.User;
+import models.UserWithComment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -24,27 +26,46 @@ public class ReactorAppApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-       // exampleIterator();
-       // exampleFlatMap ();
+        // exampleIterator();
+        // exampleFlatMap ();
         //exampleToString();
-exampleFluxToMono();
+        //exampleFluxToMono();
+        exampleUserWithComments();
+
     }
 
-    public void exampleFluxToMono () {
+    public void exampleUserWithComments() {
+
+        log.info("--------------- Head flow -------------- ");
+        Mono<User> userMono = Mono.fromCallable(() -> new User("bruce", " lee"));
+        Mono<Comment> commentMono = Mono.fromCallable(() -> {
+            Comment comments = new Comment();
+            comments.setComments("Hi");
+            comments.setComments(" My name is roberto");
+            comments.setComments(" My name is roberto");
+            return comments;
+        });
+
+        userMono.flatMap(user -> commentMono
+                .map(comment -> new UserWithComment(user,comment)))
+                .subscribe(userWithComment -> log.info(userWithComment.toString()));
+    }
+
+    public void exampleFluxToMono() {
 
         log.info("--------------- Head flow -------------- ");
         List<User> names3List = new ArrayList<>();
-        names3List.add( new User("Danilo","perez"));
-        names3List.add(new User("camilo "," ruiz"));
-        names3List.add(new User("David ","uribe"));
-        names3List.add(new User("Antonio"," rios"));
-        names3List.add(new User("Carmen"," lee"));
-        names3List.add(new User("bruce","willis"));
-        names3List.add(new User("bruce"," lee"));
+        names3List.add(new User("Danilo", "perez"));
+        names3List.add(new User("camilo ", " ruiz"));
+        names3List.add(new User("David ", "uribe"));
+        names3List.add(new User("Antonio", " rios"));
+        names3List.add(new User("Carmen", " lee"));
+        names3List.add(new User("bruce", "willis"));
+        names3List.add(new User("bruce", " lee"));
 
         Flux.fromIterable(names3List)
                 .collectList()
-                .subscribe(list ->{
+                .subscribe(list -> {
                     log.info(list.toString());//this show me the complete list
                     list.forEach(user -> log.info(user.toString()));//this interact all list and show me all objects but separated on items
 
@@ -53,7 +74,7 @@ exampleFluxToMono();
 
     }
 
-    public void exampleFlatMap () {
+    public void exampleFlatMap() {
 
         log.info("--------------- Head flow -------------- ");
         List<String> names3List = new ArrayList<>();
@@ -68,10 +89,9 @@ exampleFluxToMono();
         Flux.fromIterable(names3List)
                 .map(name -> new User(name.split(" ")[0], name.split(" ")[1]))
                 .flatMap(user -> {
-                    if (user.getName().equals("bruce")){
+                    if (user.getName().equals("bruce")) {
                         return Mono.just(user);
-                    }
-                    else{
+                    } else {
                         return Mono.empty();//not emit nothing
                     }
                 })
@@ -80,42 +100,41 @@ exampleFluxToMono();
                     user.setName(name);
                     return user;
                 })
-                .subscribe(user ->log.info(user.toString()));
+                .subscribe(user -> log.info(user.toString()));
 
 
     }
 
-    public void exampleToString () {
+    public void exampleToString() {
 
         log.info("--------------- Head flow -------------- ");
         List<User> names3List = new ArrayList<>();
-        names3List.add( new User("Danilo","perez"));
-        names3List.add(new User("camilo "," ruiz"));
-        names3List.add(new User("David ","uribe"));
-        names3List.add(new User("Antonio"," rios"));
-        names3List.add(new User("Carmen"," lee"));
-        names3List.add(new User("bruce","willis"));
-        names3List.add(new User("bruce"," lee"));
+        names3List.add(new User("Danilo", "perez"));
+        names3List.add(new User("camilo ", " ruiz"));
+        names3List.add(new User("David ", "uribe"));
+        names3List.add(new User("Antonio", " rios"));
+        names3List.add(new User("Carmen", " lee"));
+        names3List.add(new User("bruce", "willis"));
+        names3List.add(new User("bruce", " lee"));
 
         Flux.fromIterable(names3List)
-                .map(user ->  user.getName().toUpperCase().concat(" ").concat( user.getLastName()))
+                .map(user -> user.getName().toUpperCase().concat(" ").concat(user.getLastName()))
                 .flatMap(name -> {
-                    if (name.contains("bruce".toUpperCase())){//this showme when the object containt something text
+                    if (name.contains("bruce".toUpperCase())) {//this showme when the object containt something text
                         return Mono.just(name);
-                    }
-                    else{
+                    } else {
                         return Mono.empty();//not emit nothing
                     }
                 })
                 .map(name -> {
                     return name;
                 })
-                .subscribe(user ->log.info(user.toString()));
+                .subscribe(user -> log.info(user.toString()));
 
 
     }
 
-    public void exampleIterator()  throws Exception {
+    public void exampleIterator() throws Exception {
 
         log.info("--------------- Head flow -------------- ");
         List<String> names3List = new ArrayList<>();
@@ -137,7 +156,7 @@ exampleFluxToMono();
 
         //All flows are immutable  because you can't change the flow you ccan make others flow from the start flow but
         // you never can change that flow
-        Flux<String> names = Flux.just("David uribe", "Antonio rios", "Carmen lee","bruce lee","bruce willis", " ",
+        Flux<String> names = Flux.just("David uribe", "Antonio rios", "Carmen lee", "bruce lee", "bruce willis", " ",
                 "luis f");
         Flux<User> namesFiltered = names.map(nombre -> new User(nombre.split(" ")[0], nombre.split(" ")[1]))//this modified the
                 // flux type String to flux type user

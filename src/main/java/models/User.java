@@ -3,9 +3,7 @@ package models;
 import lombok.*;
 
 @Data
-@Builder(toBuilder = true)
 @AllArgsConstructor
-@NonNull
 public class User {
     @NonNull//This are used when you need one parameter and that parameter can't be null
     private String name;
