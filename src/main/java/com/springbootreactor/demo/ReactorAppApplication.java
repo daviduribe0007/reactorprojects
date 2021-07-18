@@ -4,6 +4,8 @@ package com.springbootreactor.demo;
 import models.Comment;
 import models.User;
 import models.UserWithComment;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -43,9 +45,62 @@ public class ReactorAppApplication implements CommandLineRunner {
         //delayElements();
         //delayElementsMethod();
        // infiniteInterval();
-        exampleIntervalSinceCreate();
+        //exampleIntervalSinceCreate();
+        //exampleWithBackPressure();
+        exampleWithBackPressure2();
 
     }
+
+    public void exampleWithBackPressure(){
+
+        Flux.range(1,10)
+                .log() // this is used to see all trace on the route
+                //.subscribe(integer -> log.info(integer.toString()));
+                .subscribe(new Subscriber<Integer>() {
+
+                    private Subscription s;
+                    private  Integer limit = 2;
+                    private  Integer consumed = 0;
+
+                    @Override
+                    public void onSubscribe(Subscription subscription) {
+                        this.s = subscription;
+                        //s.request(Long.MAX_VALUE);// this sent tha maximum elements
+                        s.request(limit);
+
+                    }
+
+                    @Override
+                    public void onNext(Integer integer) {
+                        log.info(integer.toString());
+                        consumed++;
+                        if(consumed == limit){
+                            consumed = 0;
+                            s.request(limit);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable throwable) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
+    }
+
+    public void exampleWithBackPressure2(){
+
+        Flux.range(1,10)
+                .log() // this is used to see all trace on the route
+                //.subscribe(integer -> log.info(integer.toString()));
+                .limitRate(3)
+                .subscribe(integer -> log.info(integer.toString()));
+    }
+
 
     public void exampleIntervalSinceCreate() {
         Flux.create(emmiter -> {
