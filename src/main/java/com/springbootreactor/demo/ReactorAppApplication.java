@@ -12,9 +12,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.sql.Time;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
 @SpringBootApplication
@@ -39,25 +42,53 @@ public class ReactorAppApplication implements CommandLineRunner {
         //exampleInterval();
         //delayElements();
         //delayElementsMethod();
-        infiniteInterval();
+       // infiniteInterval();
+        exampleIntervalSinceCreate();
 
     }
+
+    public void exampleIntervalSinceCreate() {
+        Flux.create(emmiter -> {
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() { // the first  position is the task 2 delay and 3 period
+                private Integer counter = 0;
+                @Override
+                public void run() {
+                    emmiter.next(++counter);
+                    if(counter == 10){
+                        timer.cancel();
+                        emmiter.complete();
+                    }
+                    if(counter > 11){
+                        timer.cancel();
+                        emmiter.error(new InterruptedException("Error, The number cant exceeded the number 10 "));
+                    }
+                }
+            }, 1000, 1000);
+        })
+                //.doOnNext(o -> log.info(o.toString()))
+                .doOnComplete(()-> log.info("The flow finish at 10"))
+                .subscribe(o -> log.info(o.toString()),
+                        error -> log.error(error.getMessage()),
+                        () -> log.info("The flow finish at 10"));
+    }
+
 
     public void infiniteInterval() throws InterruptedException {
 
         CountDownLatch latch = new CountDownLatch(1);
 
         Flux.interval(Duration.ofSeconds(1))
-                .doOnTerminate( latch::countDown)
-                .flatMap( aLong -> {
-                    if(aLong > 10 ){
-                        return Flux.error( new InterruptedException("The numbers only incremet to 10"));
+                .doOnTerminate(latch::countDown)
+                .flatMap(aLong -> {
+                    if (aLong > 10) {
+                        return Flux.error(new InterruptedException("The numbers only incremet to 10"));
                     }
-                    return  Flux.just(aLong);
+                    return Flux.just(aLong);
                 })
                 .map(aLong -> "hi:" + aLong)
                 .retry(2)//this are used when you need repeat something x times
-                .subscribe(s -> log.info(s.toString()),e-> log.error(e.getMessage()));
+                .subscribe(s -> log.info(s.toString()), e -> log.error(e.getMessage()));
 
         latch.await();
 
